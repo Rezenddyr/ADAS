@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cena 3D ADAS — acesso restrito</title>
+<style>
+html,body{margin:0;height:100%;background:#111318;color:#e7e9ee;font:14px/1.4 "Segoe UI",system-ui,sans-serif}
+.wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
+.card{width:100%;max-width:360px;background:#1a1d24;border:1px solid #2d323d;border-radius:14px;padding:28px 26px;box-shadow:0 18px 48px rgba(0,0,0,.45)}
+h1{margin:0 0 4px;font-size:20px}h1 span{color:#00e5ff}
+p{margin:0 0 18px;color:#8a92a3}
+input[type=password]{width:100%;box-sizing:border-box;padding:11px 12px;background:#111318;border:1px solid #2d323d;border-radius:8px;color:#e7e9ee;font-size:15px;outline:none}
+input[type=password]:focus{border-color:#4f8cff}
+label.chk{display:flex;gap:7px;align-items:center;margin:12px 0 16px;color:#8a92a3;cursor:pointer}
+button{width:100%;padding:11px;border:0;border-radius:8px;background:#4f8cff;color:#fff;font-weight:600;font-size:15px;cursor:pointer}
+button:disabled{opacity:.6;cursor:default}
+.err{color:#ff6b6b;min-height:20px;margin-top:10px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap"><form class="card" id="f" autocomplete="off">
+  <h1>🔒 Cena<span>3D</span> ADAS</h1>
+  <p>Acesso restrito. Digite a senha para abrir.</p>
+  <input type="password" id="pw" placeholder="Senha" autofocus>
+  <label class="chk"><input type="checkbox" id="rem"> Lembrar neste computador</label>
+  <button id="go">Entrar</button>
+  <div class="err" id="err"></div>
+</form></div>
+<script>
+// O app está criptografado (AES-256-GCM). Só a senha certa gera a chave que o abre.
+const SALT = '__SALT__', IV = '__IV__', ITER = __ITER__, DATA = '__DATA__';
+const KEY_STORE = 'cena3d-chave-' + SALT;
+const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function keyFrom(pw){
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: b64(SALT), iterations: ITER, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
+}
+async function open(key){
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(IV) }, key, b64(DATA));
+  const html = new TextDecoder().decode(plain);
+  // só troca a página depois que esta terminou de carregar (senão o app é escrito junto com a tela de senha)
+  if (document.readyState !== 'complete') await new Promise(r => addEventListener('load', r, { once: true }));
+  document.open(); document.write(html); document.close();
+}
+async function tryStored(){
+  try {
+    const raw = localStorage.getItem(KEY_STORE); if (!raw) return;
+    const key = await crypto.subtle.importKey('raw', b64(raw), 'AES-GCM', false, ['decrypt']);
+    await open(key);
+  } catch { try { localStorage.removeItem(KEY_STORE); } catch {} }
+}
+document.getElementById('f').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const pw = document.getElementById('pw').value, btn = document.getElementById('go'), err = document.getElementById('err');
+  if (!pw) return;
+  btn.disabled = true; btn.textContent = 'Abrindo…'; err.textContent = '';
+  try {
+    const key = await keyFrom(pw);
+    if (document.getElementById('rem').checked){
+      const raw = new Uint8Array(await crypto.subtle.exportKey('raw', key));
+      try { localStorage.setItem(KEY_STORE, btoa(String.fromCharCode(...raw))); } catch {}
+    }
+    await open(key);
+  } catch {
+    err.textContent = 'Senha incorreta.'; btn.disabled = false; btn.textContent = 'Entrar';
+    document.getElementById('pw').select();
+  }
+});
+tryStored();
+</script>
+</body>
+</html>

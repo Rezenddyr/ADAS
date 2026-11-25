@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cena 3D ADAS</title>
+<style>
+:root{--bg:#111318;--panel:#1a1d24;--panel2:#22262f;--line:#2d323d;--text:#e7e9ee;--muted:#8a92a3;--accent:#4f8cff;--accent2:#ffb547;--cyan:#00e5ff;--danger:#ff5d5d;--rec:#ff3b3b;--ok:#3ecf8e}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/1.4 "Segoe UI",system-ui,sans-serif;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+#app{display:grid;grid-template-columns:280px minmax(0,1fr) 320px;grid-template-rows:48px minmax(0,1fr) 58px;height:100vh;
+  grid-template-areas:"top top top" "lib view props" "lib bar props"}
+body.preview #app{grid-template-columns:0 minmax(0,1fr) 0}
+body.preview #lib,body.preview #props{display:none}
+#top{grid-area:top;display:flex;align-items:center;gap:6px;padding:0 10px;background:var(--panel);border-bottom:1px solid var(--line);min-width:0}
+#top .brand{font-weight:700;font-size:15px;margin-right:8px;letter-spacing:.3px;white-space:nowrap}
+#top .brand span{color:var(--cyan)}
+#top .sep{width:1px;height:24px;background:var(--line);margin:0 4px}
+#top .grow{flex:1}
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 11px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:#465068;background:#2a2f3a}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn.primary:hover{filter:brightness(1.1)}
+.btn.danger{color:var(--danger)}
+.btn.active{border-color:var(--accent);color:#cfe0ff;background:#22314f}
+.btn.rec{background:var(--rec);border-color:var(--rec);color:#fff;font-weight:600}
+.btn.sm{padding:3px 8px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:default}
+.chk{display:inline-flex;align-items:center;gap:6px;color:var(--muted);cursor:pointer;user-select:none}
+#lib{grid-area:lib;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.ltabs{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin:10px 10px 4px;padding:3px;background:var(--bg);border-radius:8px}
+.ltabs button{background:none;border:0;border-radius:6px;padding:5px;cursor:pointer;color:var(--muted)}
+.ltabs button.on{background:var(--panel2);color:var(--text);font-weight:600}
+#cats{display:flex;flex-wrap:wrap;gap:4px;padding:6px 10px}
+#cats button{background:transparent;border:1px solid var(--line);border-radius:20px;padding:3px 9px;cursor:pointer;color:var(--muted);font-size:12px}
+#cats button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+#search{margin:4px 10px 8px;padding:7px 10px;background:var(--bg);border:1px solid var(--line);border-radius:7px;outline:none}
+#search:focus{border-color:var(--accent)}
+#catnote{margin:0 10px 8px;color:var(--muted);font-size:12px}
+#items{flex:1;overflow:auto;padding:0 10px 12px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px;align-content:start}
+.item{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:5px;cursor:pointer;text-align:center;font-size:11.5px;color:#c9cdd6}
+.item:hover{border-color:#4a5570}
+.item.on{border-color:var(--accent2);box-shadow:0 0 0 1px var(--accent2) inset}
+.item img{width:100%;aspect-ratio:1;object-fit:contain;display:block;border-radius:5px;background:#1d2129}
+.item div{margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#layers{flex:1;overflow:auto;padding:4px 10px 12px;display:none}
+.lay{display:flex;align-items:center;gap:6px;padding:5px 7px;border:1px solid transparent;border-radius:6px;cursor:pointer;color:#c9cdd6}
+.lay:hover{background:var(--panel2)}
+.lay.on{border-color:var(--accent2);background:#2a2618}
+.lay .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lay .ey{opacity:.7;background:none;border:0;cursor:pointer;padding:0 3px}
+.lay.off .nm{opacity:.4;text-decoration:line-through}
+.lay.child{padding-left:22px}
+.lay small{color:var(--muted)}
+.layh{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.6px;margin:10px 0 4px}
+#view{grid-area:view;position:relative;background:#06070a;min-width:0;min-height:0;overflow:hidden}
+#stage{position:absolute;overflow:hidden}
+#stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;outline:none}
+#hud{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;font-family:"Segoe UI",Arial,sans-serif}
+#hud [data-h]{pointer-events:all;cursor:move}
+body.preview #hud [data-h]{pointer-events:none}
+#hud [data-rs]{pointer-events:all;cursor:nwse-resize}
+#empty{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;color:#c9cdd6;background:rgba(15,17,22,.85);border:1px solid var(--line);border-radius:12px;padding:18px 24px;max-width:420px;pointer-events:none;display:none}
+#empty b{color:var(--accent2)}
+#hint{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:rgba(15,17,22,.9);border:1px solid var(--line);padding:7px 14px;border-radius:20px;font-size:12.5px;pointer-events:none;white-space:nowrap;display:none;z-index:3}
+#hint b{color:var(--accent2)}
+#toast{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:rgba(20,24,32,.96);border:1px solid var(--line);padding:8px 16px;border-radius:8px;font-size:13px;pointer-events:none;opacity:0;transition:opacity .25s;z-index:4;max-width:80%;text-align:center}
+#recbadge{position:absolute;left:14px;top:14px;background:var(--rec);color:#fff;font-weight:700;padding:5px 12px;border-radius:6px;display:none;font-variant-numeric:tabular-nums;z-index:4}
+#exitPreview{position:absolute;right:14px;top:14px;display:none;z-index:4}
+body.preview #exitPreview{display:inline-flex}
+#stepnav{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);display:none;align-items:center;gap:8px;background:rgba(15,17,22,.92);border:1px solid var(--line);border-radius:30px;padding:5px 8px;z-index:4;max-width:92%}
+body.preview #stepnav.has{display:flex}
+#stepnav .lbl{padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px}
+#stepnav .lbl b{color:var(--cyan)}
+#stepnav .btn.pulse{animation:pl 1.2s ease-in-out infinite;border-color:var(--cyan)}
+@keyframes pl{50%{box-shadow:0 0 0 4px rgba(0,229,255,.25)}}
+#props{grid-area:props;background:var(--panel);border-left:1px solid var(--line);overflow:auto;padding:12px}
+.sec{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px;margin-bottom:10px}
+.sec h3{margin:0 0 9px;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+details.sec>summary{list-style:none;cursor:pointer;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;display:flex;justify-content:space-between}
+details.sec>summary::-webkit-details-marker{display:none}
+details.sec>summary::after{content:'▾'}details.sec:not([open])>summary::after{content:'▸'}
+details.sec[open]>summary{margin-bottom:9px}
+.field{display:flex;flex-direction:column;gap:3px;margin-bottom:8px;color:var(--muted);font-size:12px;min-width:0}
+.field input[type=number],.field input[type=text],.field select,.field textarea{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 7px;color:var(--text);width:100%;outline:none}
+.field textarea{resize:vertical;min-height:52px}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent)}
+.field input[type=range]{width:100%}
+.field input[type=color]{width:100%;height:30px;border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:2px}
+.fgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 8px}
+.fgrid .full{grid-column:1/-1}
+.fgrid .chk{margin-bottom:8px}
+.row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
+.btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.btns .btn{flex:1;justify-content:center}
+.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;margin-bottom:9px}
+.seg button{flex:1;background:var(--bg);border:0;padding:6px 4px;cursor:pointer;color:var(--muted);font-size:12px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--accent);color:#fff}
+.objhead{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.objhead img{width:54px;height:54px;border-radius:7px;background:#1d2129;object-fit:contain}
+.objhead b{display:block;font-size:14px}
+.objhead small{color:var(--muted)}
+.note{color:var(--muted);font-size:12px;margin:4px 0 8px}
+.shot,.evrow{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.shot input,.evrow input{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 7px;min-width:0}
+.evrow input{width:60px}
+.evrow span{color:var(--muted);font-size:11.5px;white-space:nowrap}
+.step{border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:7px;background:var(--bg)}
+.step.cur{border-color:var(--cyan)}
+.step .hd{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.step .hd b{color:var(--cyan);white-space:nowrap}
+.step input,.step textarea,.step select{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px 7px;width:100%;min-width:0;outline:none}
+.step textarea{margin-top:5px;resize:vertical;min-height:40px}
+.step .hd input{width:64px;flex:none}
+.step .hd input.tt{flex:1;width:auto}
+.ecu label{display:block;margin-bottom:6px;color:var(--muted);font-size:12px}
+.ecu label b{color:var(--text)}
+.ecu input[type=range]{width:100%}
+.ecu input[type=range]:disabled{opacity:.4}
+#ntst{padding:6px 8px;border-radius:6px;background:var(--bg);font-size:12px;margin:4px 0 8px}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:12px;color:var(--muted)}
+.keys kbd{background:var(--bg);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;color:var(--text);font:11px/18px ui-monospace,monospace;white-space:nowrap;justify-self:start}
+ol.steps{margin:0;padding-left:18px;color:#c9cdd6;font-size:12.5px}
+ol.steps li{margin-bottom:4px}
+#bar{grid-area:bar;display:flex;align-items:center;gap:8px;padding:0 12px;background:var(--panel);border-top:1px solid var(--line);min-width:0}
+#bar .btn{height:36px}
+#playBtn{width:44px;justify-content:center;font-size:15px}
+#tline{flex:1;min-width:80px;position:relative;height:36px;display:flex;align-items:center}
+#time{width:100%;accent-color:var(--accent);position:relative;z-index:1}
+#marks{position:absolute;left:8px;right:8px;top:2px;bottom:2px;pointer-events:none}
+#marks i{position:absolute;top:0;width:2px;height:9px;background:var(--cyan);border-radius:1px}
+#timeLabel{font-variant-numeric:tabular-nums;color:var(--muted);min-width:88px;text-align:center}
+#camSel{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px;max-width:200px}
+#loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:10;font-size:15px}
+#loading .barw{width:280px;height:6px;background:var(--panel2);border-radius:3px;overflow:hidden}
+#loading .barw div{height:100%;width:0;background:var(--accent);transition:width .1s}
+.mopts{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.mopt{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:2px}
+.mopt b{font-size:13px}.mopt small{color:var(--muted);font-size:11px;line-height:1.25}
+.mopt:hover{border-color:#4a5570}.mopt.on{border-color:var(--accent);background:#1d2b45}
+.sec.mov{border-color:#3a4f7a}
+#quick{position:absolute;left:50%;top:10px;transform:translateX(-50%);display:none;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;background:rgba(15,17,22,.93);border:1px solid var(--line);border-radius:12px;padding:6px 8px;z-index:3;max-width:96%}
+#quick b{padding:0 6px;white-space:nowrap}#quick .qsel{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:4px 6px}#quick .qn{color:var(--muted);font-size:12px}
+body.preview #quick{display:none!important}
+#help{position:fixed;inset:0;background:rgba(5,6,9,.72);display:none;align-items:center;justify-content:center;z-index:20;padding:20px}
+#help .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;max-width:880px;width:100%;max-height:92vh;overflow:auto;padding:22px 24px}
+#help h2{margin:0 0 4px;font-size:20px}#help .sub{color:var(--muted);margin:0 0 16px}
+#help .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#help .card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+#help .card h4{margin:0 0 6px;font-size:14px}#help .card p,#help .card li{color:#c9cdd6;font-size:12.5px;margin:0 0 4px}
+#help .card ol{margin:0;padding-left:18px}#help b{color:var(--accent2)}
+#help .where{display:inline-block;background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:0 6px;font-size:11.5px;color:var(--cyan)}
+@media (max-width:800px){#help .grid{grid-template-columns:1fr}}
+@media (max-width:1100px){#app{grid-template-columns:230px minmax(0,1fr) 270px}#top .lbl{display:none}}
+</style>
+</head>
+<body>
+<div id="loading"><div>Carregando modelos 3D…</div><div class="barw"><div id="loadbar"></div></div><div id="loadtxt" style="color:var(--muted);font-size:12px"></div></div>
+<div id="app">
+  <div id="top">
+    <div class="brand">Cena<span>3D</span> ADAS</div>
+    <button class="btn" id="bNew" title="Cena vazia">Novo</button>
+    <button class="btn" id="bOpen" title="Abrir projeto .json">Abrir</button>
+    <button class="btn" id="bSave" title="Salvar projeto (Ctrl+S)">Salvar</button>
+    <button class="btn" id="bImport" title="Adicionar seu próprio modelo .glb">+ Modelo GLB</button>
+    <div class="sep"></div>
+    <button class="btn" id="bUndo" title="Desfazer (Ctrl+Z)">↶ <span class="lbl">Desfazer</span></button>
+    <div class="sep"></div>
+    <label class="chk"><input type="checkbox" id="cSnap" checked> <span class="lbl">Encaixar</span></label>
+    <label class="chk"><input type="checkbox" id="cGrid" checked> <span class="lbl">Grade</span></label>
+    <div class="grow"></div>
+    <button class="btn" id="bHelp" title="Onde fica cada coisa">❓ Ajuda</button>
+    <button class="btn primary" id="bPreview" title="Apresentar a cena em tela cheia (V)">▶ Apresentar</button>
+  </div>
+  <div id="lib">
+    <div class="ltabs"><button data-lt="lib" class="on">Biblioteca</button><button data-lt="lay">Camadas</button></div>
+    <div id="libwrap" style="display:flex;flex-direction:column;min-height:0;flex:1">
+      <div id="cats"></div>
+      <input id="search" placeholder="Buscar…">
+      <div id="catnote"></div>
+      <div id="items"></div>
+    </div>
+    <div id="layers"></div>
+  </div>
+  <div id="view">
+    <div id="stage"><svg id="hud" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div id="empty"></div>
+    <div id="quick"></div>
+    <div id="hint"></div>
+    <div id="toast"></div>
+    <div id="recbadge">● REC</div>
+    <button class="btn" id="exitPreview">✕ Voltar a editar</button>
+    <div id="stepnav"><button class="btn sm" id="stPrev" title="Passo anterior (←)">◀</button><span class="lbl" id="stLbl"></span><button class="btn sm" id="stNext" title="Continuar (→ ou Espaço)">Continuar ▶</button><label class="chk" title="Pausa no começo de cada passo"><input type="checkbox" id="stPause" checked> pausar</label></div>
+  </div>
+  <div id="props"></div>
+  <div id="bar">
+    <button class="btn" id="playBtn" title="Play / Pausa (Espaço)">▶</button>
+    <button class="btn" id="stopBtn" title="Voltar ao início">⏮</button>
+    <button class="btn" id="loopBtn">🔁 Loop</button>
+    <div id="tline"><div id="marks"></div><input type="range" id="time" min="0" max="12" step="0.01" value="0"></div>
+    <span id="timeLabel">0.0s / 12s</span>
+    <select id="camSel" title="Câmera"></select>
+    <button class="btn" id="photoBtn" title="Salvar imagem PNG">📷 Foto</button>
+    <button class="btn" id="gifBtn" title="Gerar GIF animado da cena inteira">GIF</button>
+    <button class="btn" id="recBtn" title="Gravar vídeo da cena">⏺ Vídeo</button>
+  </div>
+</div>
+<div id="help"><div class="box">
+  <h2>Como usar o Cena3D ADAS</h2><p class="sub">Onde fica cada coisa. Abra de novo quando quiser pelo botão <b>❓ Ajuda</b> lá em cima.</p>
+  <div class="grid">
+    <div class="card"><h4>1 · Montar a pista</h4><ol>
+      <li>Na <span class="where">Biblioteca → Estradas</span>, pegue uma peça (reta, curva, cruzamento…) e clique no chão.</li>
+      <li>Clique na peça: na barra de cima escolha o <b>número de faixas</b> (2, 4, 6 ou 8). <b>Aplicar a toda a pista</b> (painel direito) muda todas de uma vez.</li>
+      <li><b>Encaixe automático:</b> ao levar uma peça perto da ponta de outra estrada, ela gira e encaixa sozinha (🔗). <b>R</b> troca o lado da curva, <b>Alt</b> solta livre. Também funciona arrastando peças que já estão na cena.</li>
+      <li><b>Segure e arraste</b> com a peça escolhida para ir colando pista atrás do mouse.</li>
+      <li><b>🅿 Estacionamento:</b> selecione uma reta e escolha as <b>vagas ao lado</b> (de um lado, do outro ou dos dois). As retas emendadas depois já vêm com vagas.</li>
+      <li>Ou, com a peça selecionada, use a barra de cima <b>⬆ Reta / ↰ ↱ Curva / ✚ Cruzamento</b> para encaixar a próxima na ponta.</li></ol></div>
+    <div class="card"><h4>2 · Colocar o carro e fazer ele andar</h4><ol>
+      <li>Na <span class="where">Biblioteca → Veículos</span>, clique no carro e depois em cima da faixa.</li>
+      <li>Com o carro selecionado, aparece a barra no topo e o bloco <b>🚗 Como este veículo se move</b> na direita:</li>
+      <li><b>🛣 Seguir a faixa</b>: ele faz o trajeto sozinho pela faixa onde está, passando pelas peças encaixadas (retas, curvas e cruzamentos).</li>
+      <li><b>✎ Desenhar trajeto</b>: você clica os pontos do caminho no chão (Enter termina).</li>
+      <li><b>Pessoas</b> andam e, acima de uns 8 km/h, correm sozinhas (ou escolha Andando / Correndo na pose).</li>
+      <li><b>🛡 ACC entre carros</b>: no carro de trás, em Movimento, escolha “Seguir” o carro da frente; ele freia e acelera sozinho sem bater.</li>
+      <li><b>🧑 Pessoa no veículo</b>: no painel do carro, moto ou bicicleta, escolha quem dirige. Ela fica animada (dirigindo, pilotando ou pedalando).</li>
+      <li><b>➡ Reto</b>: anda em linha reta pela distância que você escolher.</li></ol></div>
+    <div class="card"><h4>3 · Loop (repetir)</h4>
+      <p><b>Cada veículo:</b> em “Quando chegar no fim do percurso” escolha <b>🔁 Volta ao início</b> (loop), <b>↻ Circuito</b> (pista fechada) ou <b>⏹ Para</b>. Também tem o botão <b>🔁 Repetir</b> na barra de cima.</p>
+      <p><b>A cena inteira:</b> o botão <b>🔁 Loop</b> na barra de baixo faz a cena recomeçar quando chega ao fim da duração. A duração fica em <span class="where">painel direito → Cena</span>.</p></div>
+    <div class="card"><h4>4 · Efeitos ADAS</h4><ol>
+      <li><span class="where">Biblioteca → ADAS (efeitos)</span>: cone de radar, zona, sensores, linhas guia, rótulos…</li>
+      <li>Clique no efeito e depois <b>em cima do carro</b>: ele fica preso e anda junto.</li>
+      <li>Ajuste alcance, cor, <b>Tamanho do efeito</b> e quando aparece em <b>Tempo na cena</b>.</li>
+      <li>Cone, zona e sensores podem mostrar um <b>ícone ⚠</b> quando detectam algo (caixa de marcar no painel).</li>
+      <li><b>Medida de distância</b>: clique nela e depois nos <b>dois objetos</b> que quer medir.</li></ol></div>
+    <div class="card"><h4>5 · Painel (HUD) e alertas</h4><ol>
+      <li><span class="where">Biblioteca → Painel (HUD)</span>: título, velocidade, notificação ADAS, indicadores, medidores.</li>
+      <li>Arraste na tela para posicionar; o quadrado do canto muda o tamanho.</li>
+      <li><b>📺 Telinhas</b> (no painel do veículo): câmera no rosto do motorista para <b>DDD/IDM</b> (com 😴 dormir ao volante) e o <b>carro em 3D</b> para a câmera 360.</li>
+      <li>Ícones <b>⚠ aviso visual</b> e <b>🔊 aviso sonoro</b>: na Notificação ADAS (selos), como itens do Painel e nos alertas 3D.</li>
+      <li>Marque um carro como <b>★ Carro principal</b>: a velocidade e a distância do Simulador ECU vêm dele e os alertas disparam sozinhos.</li></ol></div>
+    <div class="card"><h4>6 · Passos, apresentação e exportar</h4><ol>
+      <li>Sem nada selecionado, o painel direito mostra <b>Passo a passo</b>: mova a barra de tempo e clique <b>+ Passo</b>.</li>
+      <li><b>▶ Apresentar</b> (canto superior direito) mostra em tela cheia e para em cada passo.</li>
+      <li>Barra de baixo: <b>📷 Foto</b>, <b>GIF</b> e <b>⏺ Vídeo</b>.</li></ol></div>
+  </div>
+  <p class="sub" style="margin:14px 0 0"><b>Grupos:</b> Ctrl + clique seleciona vários objetos → <b>⛓ Agrupar</b> (Ctrl+G). <b>🎯 Centralizar câmera</b> (F) foca o objeto selecionado; a câmera <b>🔄 360°</b> gira em volta da cena ou de um objeto (ajustes em Câmeras salvas).</p>
+  <p class="sub" style="margin:6px 0 0">Dicas: <b>Esc</b> cancela/desseleciona · <b>Ctrl+Z</b> desfaz · <b>Delete</b> apaga · aba <b>Camadas</b> lista tudo que está na cena.</p>
+  <div class="btns" style="margin-top:12px"><button class="btn primary" data-close="1">Entendi, vamos montar</button></div>
+</div></div>
+<input type="file" id="fOpen" accept=".json,application/json" hidden>
+<input type="file" id="fImport" accept=".glb" multiple hidden>

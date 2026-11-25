@@ -1,0 +1,49 @@
+# ---------------------------------------------------------------
+# Cena3D ADAS — o que NÃO vai para o git
+# O que vai: cena3d-fonte/ (código, personagens convertidos, ícones),
+# os GLB dos pacotes (o build usa) e o Cena3D.html gerado (protegido por senha).
+# ---------------------------------------------------------------
+
+# Senha da trava (nunca versionar)
+cena3d-fonte/senha.txt
+senha.txt
+
+# Pacotes de modelos: o build só usa os .glb — os outros formatos e extras ficam de fora
+**/FBX/
+**/FBX format/
+**/OBJ/
+**/OBJ format/
+*.blend
+*.blend1
+kenney_city-kit-roads_2.2/Previews/
+kenney_city-kit-roads_2.2/*.png
+kenney_city-kit-roads_2.2/*.url
+kenney_city-kit-roads_2.2/Overview.html
+kenney_city-kit-roads_2.2/Models/Textures/
+
+# Personagens originais em FBX (já convertidos para cena3d-fonte/personagens/)
+LowPolyCharacterPack/
+
+# Arquivos de teste e gerados temporariamente
+cena3d-fonte/check.mjs
+*-debug.html
+dbg*.html
+
+# Projetos e mídia exportados do app (fotos, vídeos, GIFs e cenas salvas)
+cena-*.png
+cena-*.gif
+cena-*.mp4
+cena-*.webm
+cena-adas-*.json
+
+# Sistema, editores e dependências
+node_modules/
+.vscode/
+.idea/
+.claude/
+Thumbs.db
+desktop.ini
+.DS_Store
+*.tmp
+*.log
+~$*
